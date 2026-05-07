@@ -1,0 +1,10 @@
+input: /home/Qwen3/dataset/1117/dc_random_12000_ucb_3.jsonl
+tokenizer_name_or_path: /home/Qwen3/Model/Qwen3-4B/
+output_prefix: /home/train_result/1117/dc_random_12000_ucb/processed_data/arm_3/processed
+handler_name: R1AlpacaStyleInstructionHandler
+tokenizer_type: HuggingFaceTokenizer
+workers: 8
+log_interval: 1000
+prompt_type: qwen3
+map_keys: {"prompt":"instruction", "query":"", "response": "output", "system":""}
+dataset_additional_keys: ["labels"]

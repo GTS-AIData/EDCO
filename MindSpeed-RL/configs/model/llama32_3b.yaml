@@ -1,0 +1,19 @@
+llama32_3b:
+  use_mcore_models: true
+  num_layers: 28
+  hidden_size: 3072
+  num_attention_heads: 24
+  max_position_embeddings: 131072
+  make_vocab_size_divisible_by: 1
+  padded_vocab_size: 128256
+  untie_embeddings_and_output_weights: false
+  disable_bias_linear: true
+  group_query_attention: true
+  num_query_groups: 8
+  position_embedding_type: rope
+  normalization: RMSNorm
+  swiglu: true
+  attention_softmax_in_fp32: true
+  attention_bias: false
+  qk_layernorm: false
+  kv_channels: 128

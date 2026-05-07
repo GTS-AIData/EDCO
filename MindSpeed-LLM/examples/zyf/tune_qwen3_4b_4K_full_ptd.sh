@@ -1,0 +1,122 @@
+# json_output nl2sql function graph
+#!/bin/bash
+DATE=0807
+FOLDER_NAME=graph
+
+export CUDA_DEVICE_MAX_CONNECTIONS=1
+export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
+
+NPUS_PER_NODE=8
+MASTER_ADDR=localhost
+MASTER_PORT=7500
+NNODES=1
+NODE_RANK=0
+WORLD_SIZE=$(($NPUS_PER_NODE*$NNODES))
+
+# please fill these path configurations
+CKPT_LOAD_DIR="/data1/z30044758/Qwen3/model_weight/Qwen3-4B-mcore-TP8PP1/"
+CKPT_SAVE_DIR="/data1/z30044758/Qwen3/train_result/${DATE}/${FOLDER_NAME}"
+DATA_PATH="/data1/z30044758/Qwen3/dataset/${DATE}/output_${FOLDER_NAME}/generated_result_train"
+TOKENIZER_PATH="/data1/z30044758/Qwen3/Model/Qwen3-4B/"
+
+TP=8
+PP=1
+MBS=1
+GBS=8
+SEQ_LENGTH=8192
+TRAIN_ITERS=1699
+SAVE_ITERS=5000
+
+DISTRIBUTED_ARGS="
+    --nproc_per_node $NPUS_PER_NODE \
+    --nnodes $NNODES \
+    --node_rank $NODE_RANK \
+    --master_addr $MASTER_ADDR \
+    --master_port $MASTER_PORT
+"
+
+GPT_ARGS="
+    --use-mcore-models \
+    --spec mindspeed_llm.tasks.models.spec.qwen3_spec layer_spec \
+    --kv-channels 128 \
+    --qk-layernorm \
+    --tensor-model-parallel-size ${TP} \
+    --pipeline-model-parallel-size ${PP} \
+    --num-layers 36 \
+    --hidden-size 2560 \
+    --sequence-parallel \
+    --use-distributed-optimizer \
+    --use-flash-attn \
+    --use-rotary-position-embeddings \
+    --num-attention-heads 32 \
+    --ffn-hidden-size 9728 \
+    --max-position-embeddings 32768 \
+    --seq-length 4096 \
+    --make-vocab-size-divisible-by 1 \
+    --padded-vocab-size 151936 \
+    --rotary-base 1000000 \
+    --micro-batch-size ${MBS} \
+    --global-batch-size ${GBS} \
+    --disable-bias-linear \
+    --train-iters ${TRAIN_ITERS} \
+    --swiglu \
+    --tokenizer-type PretrainedFromHF \
+    --tokenizer-name-or-path ${TOKENIZER_PATH} \
+    --normalization RMSNorm \
+    --position-embedding-type rope \
+    --norm-epsilon 1e-6 \
+    --hidden-dropout 0 \
+    --attention-dropout 0 \
+    --no-gradient-accumulation-fusion \
+    --attention-softmax-in-fp32 \
+    --exit-on-missing-checkpoint \
+    --no-masked-softmax-fusion \
+    --group-query-attention \
+    --num-query-groups 8 \
+    --min-lr 1.25e-7 \
+    --lr 1.25e-6 \
+    --weight-decay 1e-1 \
+    --clip-grad 1.0 \
+    --adam-beta1 0.9 \
+    --adam-beta2 0.95 \
+    --initial-loss-scale 4096 \
+    --no-load-optim \
+    --no-load-rng \
+    --seed 42 \
+    --bf16
+"
+
+DATA_ARGS="
+    --data-path $DATA_PATH \
+    --split 100,0,0
+"
+
+OUTPUT_ARGS="
+    --log-interval 1 \
+    --save-interval ${SAVE_ITERS} \
+    --eval-interval 1000 \
+    --eval-iters 0 \
+"
+
+CKPT_ARGS="
+    --no-save-optim \
+"
+
+TUNE_ARGS="
+    --finetune \
+    --stage sft \
+    --is-instruction-dataset \
+    --prompt-type qwen \
+    --variable-seq-lengths
+"
+
+torchrun $DISTRIBUTED_ARGS posttrain_gpt.py \
+    $GPT_ARGS \
+    $DATA_ARGS \
+    $OUTPUT_ARGS \
+    $TUNE_ARGS \
+    $CKPT_ARGS \
+    --distributed-backend nccl \
+    --load ${CKPT_LOAD_DIR} \
+    --save ${CKPT_SAVE_DIR} \
+    | tee logs/tune_qwen3_4b_full.log
