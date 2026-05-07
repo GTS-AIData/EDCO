@@ -2,7 +2,7 @@
 
 # 🚀 EDCO-MindSpeed 强化学习训练框架
 
-本项目基于 **Mindie** 框架实现强化学习（RL）训练。核心依赖于昇腾（Ascend）提供的 **MindSpeed-LLM** 与 **MindSpeed-RL** 加速库。
+本项目基于 **MindSpeed** 框架实现强化学习（RL）训练。核心依赖于昇腾（Ascend）提供的 **MindSpeed-LLM** 与 **MindSpeed-RL** 加速库。
 
 [![Ascend](https://img.shields.io/badge/Ascend-MindSpeed-orange)](https://github.com/Ascend)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
